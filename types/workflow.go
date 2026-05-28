@@ -24,6 +24,7 @@ type NodeDef struct {
 	ID           string         `json:"id,omitempty"`
 	Name         string         `json:"name,omitempty"`
 	Type         string         `json:"type,omitempty"`
+	Version      int            `json:"version,omitempty"`
 	Template     string         `json:"template,omitempty"`
 	Position     *Position      `json:"position,omitempty"`
 	Disabled     bool           `json:"disabled,omitempty"`
