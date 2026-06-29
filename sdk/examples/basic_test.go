@@ -27,7 +27,7 @@ import (
 	"testing"
 
 	"github.com/gfa-inc/xflow/node"
-	xflow "github.com/gfa-inc/xflow/sdk"
+	"github.com/gfa-inc/xflow/sdk/xflow"
 	"github.com/gfa-inc/xflow/types"
 )
 
