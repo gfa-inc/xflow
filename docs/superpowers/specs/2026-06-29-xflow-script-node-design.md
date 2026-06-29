@@ -131,7 +131,12 @@ $helpers.aes.decrypt(ciphertext, key, iv, mode?)   // AES 解密（js 族始终�
 
 因此整个 **js 族始终暴露 `$helpers.aes`**：它由纯 Go 的 `helpers.go` 支撑，goja 和 qjs 绑定同一个 Go host 函数。该兜底的存在**不**取决于单个引擎是否带原生 WebCrypto——即便 qjs 自带 WebCrypto，那只是脚本可选的额外原生能力，`$helpers.aes` 依然存在以保证族内一致。`$helpers.credential` / `$helpers.base64` 同理，全族始终提供。
 
-凭证仅限**节点 Descriptor 显式声明**的项（最小暴露面）。`$helpers.credential(name)` 返回 `{key, iv, mode, ...}`（key/iv 为 base64）。
+凭证闸门：script 是**通用节点**，同一 `xflow.script` 类型被不同工作流复用，要用哪些凭证是**实例级**的，无法写死在静态 `Descriptor.Credentials` 里。因此节点实例通过 **`credentials` 参数**（字符串数组）显式声明本脚本允许使用的凭证名。引擎**只解析该列表内的凭证**：
+
+- **wasm**：仅列表内的凭证被注入 stdin JSON 的 `$credentials`；列表为空则 `$credentials` 为空对象。
+- **js**：`$helpers.credential(name)` 仅当 `name` 在列表内才返回 `{key, iv, mode, ...}`（key/iv 为 base64）；列表外的名字返回 `null`。
+
+未在 `credentials` 显式声明的凭证 → 不注入、取不到。这是最小暴露面的可执行闸门。
 
 > 跨语言族暴露不同是预期的（执行模型本就不同，见下）；一致性约束只在**族内**。`$helpers` 是 **JS 专属**——host 函数只能绑进 JS runtime。wasm guest 调不了 host 函数，凭证以**数据**形式经 stdin JSON 的 `$credentials` 字段传入，guest 用自带 crypto 解密。两族凭证来源语义统一（都源于声明的凭证），只是 js 是函数调用、wasm 是数据读取。
 
@@ -151,7 +156,7 @@ $helpers.aes.decrypt(ciphertext, key, iv, mode?)   // AES 解密（js 族始终�
 
 **基础约束（两族）：**
 
-- 仅注入节点 Descriptor 显式声明的凭证，且按需取用。
+- 仅注入实例级 `credentials` 参数列出的凭证，且按需取用；列表外的凭证不注入、取不到。
 - `$helpers.aes` 失败时返回通用错误，**绝不**回显 key / iv / 明文片段。
 - js 路径仅注入 `$helpers`（credential / base64 / aes），不挂载任何 IO 能力；wasm 路径仅经 stdin 注入凭证数据，不绑定 host 函数。
 
@@ -205,17 +210,17 @@ wasm 的 `$credentials` 是**数据**，与业务 input 同处一份 JSON，存�
 node.Script(`({result: $input.x * 2})`)        // 默认 language=js, runtime=goja
 node.Script(code).Runtime("qjs")
 node.Script(b64wasm).Language("wasm")           // runtime 默认 wazero
-node.Script(code).Language("js").Runtime("goja")
+node.Script(code).Credentials("db_key", "api_secret")   // 声明本实例可用的凭证
 ```
 
 Descriptor：
 
 - `Type` = `xflow.script`
-- Params：`language`（默认 `js`）/ `runtime`（默认 `goja`）/ `code`（必填，string）
+- Params：`language`（默认 `js`）/ `runtime`（默认 `goja`）/ `code`（必填，string）/ `credentials`（string 数组，默认空，声明本实例允许使用的凭证名）
 - Inputs：`main`
 - Outputs：`main` + `error`
 
-`RawParams()` 仅输出非默认字段（与 http/function 节点惯例一致）。`init()` 自注册到全局节点 registry。凭证声明走 Descriptor.Credentials；两族据此决定 `$helpers.credential` / `$credentials` 可取哪些凭证。
+`RawParams()` 仅输出非默认字段（与 http/function 节点惯例一致）。`init()` 自注册到全局节点 registry。凭证闸门走**实例级 `credentials` 参数**（非静态 `Descriptor.Credentials`，见 §6）：引擎只解析该列表内的名字，决定 `$helpers.credential` 可返回、`$credentials` 可注入哪些凭证。
 
 ## 9. 测试策略
 
@@ -229,7 +234,7 @@ Descriptor：
 - Descriptor 正确性、`RawParams()` 往返
 - 成功 → main 端口、运行时错误 → error 端口、缺 code → Go error
 - runtime 选择：goja / qjs / wazero 分别可执行
-- 凭证流向：两族凭证均源于声明项；js 经 `$helpers.credential` host 函数、wasm 经 stdin JSON 的 `$credentials` 字段；未声明的凭证不可获取
+- 凭证闸门：仅 `credentials` 参数列出的名字可取——js `$helpers.credential(listed)` 返回值、`$helpers.credential(unlisted)` 返回 `null`；wasm `$credentials` 仅含列出项；空列表时 wasm `$credentials` 为空、js 任意 name 取不到
 - **凭证/logical-input 分离（wasm）**：持久化/日志/trace 用的 logicalInput 不含 `$credentials`；仅 wireInput 含，且只用于写 stdin
 - **输出 scrub（两族）**：脚本把凭证值写入输出时，宿主在映射成 `Output.Data` 前剔除/拒绝并记错，密钥不进下游
 
