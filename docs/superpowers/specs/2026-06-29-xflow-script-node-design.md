@@ -22,7 +22,7 @@
 
 默认 `language=js`，`runtime=goja`。`language=wasm` 时 runtime 默认且当前仅 `wazero`。
 
-> js 与 wasm 是**根本不同的执行模型**：js 靠注入全局变量 + 取完成值返回；wasm 是预编译二进制，通过 WASI stdin/stdout 的 JSON ABI 与宿主交换数据。两者共用 `script.Engine` 抽象，但 I/O 机制不同（见 §5）。**凭证则两族完全一致**：密钥永不进脚本，宿主声明式预解密后把明文放进 `$decrypted`（见 §6）。
+> js 与 wasm 是**根本不同的执行模型**：js 靠注入全局变量 + 取完成值返回；wasm 是预编译二进制，通过 WASI stdin/stdout 的 JSON ABI 与宿主交换数据。两者共用 `script.Engine` 抽象，但 I/O 机制不同（见 §5）。**凭证则两族完全一致**：密钥永不进脚本，宿主声明式预解密后把明文放进 `$credentials`（见 §6）。
 
 ## 3. 包结构与分层
 
@@ -30,10 +30,10 @@
 nodes/node/script.go                 # ScriptNode（package node）：节点层，组装 DSL 契约 + 预解密
 nodes/node/script/                    # package script —— 语言无关层
   ├── engine.go                       # Engine 接口 + (language, runtime) 注册表
-  ├── decrypt.go                      # 声明式预解密：读密文字段 → 用凭证解密 → 产出 $decrypted（语言无关，纯 Go）
+  ├── decrypt.go                      # 声明式预解密：读密文字段 → 用凭证解密 → 产出 $credentials（语言无关，纯 Go）
   ├── helpers.go                      # base64 等非安全工具的纯 Go 实现（语言无关）
   ├── js/                             # package js —— language=js
-  │   ├── js.go                       # JS 公共层：全局注入（含 $decrypted）、完成值提取、$helpers 绑定
+  │   ├── js.go                       # JS 公共层：全局注入（含 $credentials）、完成值提取、$helpers 绑定
   │   ├── goja.go                     # runtime=goja：sync.Pool + 程序缓存
   │   ├── qjs.go                      # runtime=qjs：github.com/fastschema/qjs
   │   └── *_test.go
@@ -47,7 +47,7 @@ nodes/node/script/                    # package script —— 语言无关层
 
 - `nodes/node/database.go`、`grpc.go` 已使 `nodes/node` 携带重依赖（mysql/grpc），故 goja/qjs/wazero 放此层合规。`engine/` 完全不受影响，依赖约束不破坏。
 - 把引擎实现隔离进子包 `script/js/`、`script/wasm/`，节点文件 `script.go` 只依赖 `script.Engine` 接口，依赖边界清晰。
-- **预解密在 `decrypt.go` 完成（语言无关、纯 Go），密钥只在这一步存在于宿主侧**，产出物只有明文；引擎拿到的 `globals` 已含 `$decrypted`，对 js/wasm 完全对称。
+- **预解密在 `decrypt.go` 完成（语言无关、纯 Go），密钥只在这一步存在于宿主侧**，产出物只有明文；引擎拿到的 `globals` 已含 `$credentials`，对 js/wasm 完全对称。
 
 ## 4. Engine 接口与注册表
 
@@ -65,12 +65,12 @@ func Lookup(language, runtime string) (Engine, bool)
 
 各引擎 `init()` 自注册：`script.Register("js","goja",...)` / `("js","qjs",...)` / `("wasm","wazero",...)`。节点按 `(language, runtime)` 查找，缺省 `("js","goja")`。
 
-`globals` 已由节点层完成预解密——含 `$decrypted`（明文映射），**不含任何密钥**。各引擎对 `Execute` 入参的解释：
+`globals` 已由节点层完成预解密——含 `$credentials`（明文映射），**不含任何密钥**。各引擎对 `Execute` 入参的解释：
 
 | 入参 | js 引擎 | wasm 引擎 |
 |------|---------|-----------|
 | `code` | JS 源码文本 | base64 预编译 wasm 模块 |
-| `globals`（含 `$decrypted`） | 注入为 JS 全局变量 | 序列化为 JSON 写入 guest stdin |
+| `globals`（含 `$credentials`） | 注入为 JS 全局变量 | 序列化为 JSON 写入 guest stdin |
 | `h Helpers` | 绑定为 JS 全局 `$helpers`（仅 `base64` 等非安全工具，族内 goja/qjs 一致） | 不绑定 host 函数；guest 自带工具 |
 | 返回值 | 脚本最后一个表达式的求值结果 | 从 guest stdout 读取的 JSON |
 
@@ -97,19 +97,19 @@ func Lookup(language, runtime string) (Engine, bool)
 | `$config` | `input.Config`（工作流配置） |
 | `$params` | `input.Params`（节点参数） |
 | `$runtime` | 每次执行的 runtime 上下文（含 `vars`） |
-| `$decrypted` | 宿主预解密产出的明文映射（见 §6），无 `decrypt` 指令时为空对象 |
+| `$credentials` | 宿主预解密产出的明文映射（见 §6），无 `decrypt` 指令时为空对象 |
 
 脚本最后一个表达式的求值结果即输出：
 
 ```js
-var token = $decrypted.token;        // 已是明文，密钥从未出现在脚本里
+var token = $credentials.token;        // 已是明文，密钥从未出现在脚本里
 ({ status: 'ok', token: token.length })   // 该对象即 Output.Data
 ```
 
 ### 5.2 wasm 语言族：WASI + stdin/stdout JSON
 
 - `code` 为 base64 编码的预编译 WASI 模块（Rust / TinyGo / AssemblyScript 等标准工具链产物）。
-- 宿主把输入对象（结构同 §5.1 的全局表，**含 `$decrypted`**，封装为单个 JSON 对象）写入 guest **stdin**。
+- 宿主把输入对象（结构同 §5.1 的全局表，**含 `$credentials`**，封装为单个 JSON 对象）写入 guest **stdin**。
 - guest 处理后把输出 JSON 写入 **stdout**，宿主读取并解析为输出对象。
 - wazero **不挂载** preopen / FS / clock / random / 环境变量 → 仍是沙箱（详见 §7）。
 
@@ -131,11 +131,11 @@ var token = $decrypted.token;        // 已是明文，密钥从未出现在脚�
 { name: "token", source: "$input.encrypted_token", credential: "aes_key" }
 ```
 
-- `name`：解密结果在 `$decrypted` 中的键
+- `name`：解密结果在 `$credentials` 中的键
 - `source`：密文来源路径（从 `$input` / `$params` 等取，base64 密文）
 - `credential`：用于解密的凭证名（解析走现有 `Input.Credential(name)`）
 
-执行顺序：脚本运行**之前**，节点层（`decrypt.go`）按每条指令——取密文 → `Input.Credential(credential)` 取 `{key, iv, mode}` → AES 解密 → 写入 `$decrypted[name]`。脚本读到的只有明文。
+执行顺序：脚本运行**之前**，节点层（`decrypt.go`）按每条指令——取密文 → `Input.Credential(credential)` 取 `{key, iv, mode}` → AES 解密 → 写入 `$credentials[name]`。脚本读到的只有明文。
 
 ```go
 node.Script(code).Decrypt("token", "$input.encrypted_token", "aes_key")
@@ -149,19 +149,19 @@ node.Script(code).Decrypt("token", "$input.encrypted_token", "aes_key")
 
 | 语言族 | 密钥 | 明文获取 | 模型 |
 |--------|------|----------|------|
-| js（goja + qjs） | 永不进脚本 | 读全局 `$decrypted` | 预解密 → 注入全局 |
-| wasm（wazero） | 永不进 guest | 读 stdin JSON 的 `$decrypted` | 预解密 → 写 stdin |
+| js（goja + qjs） | 永不进脚本 | 读全局 `$credentials` | 预解密 → 注入全局 |
+| wasm（wazero） | 永不进 guest | 读 stdin JSON 的 `$credentials` | 预解密 → 写 stdin |
 
-两族**同一个模型、同一份数据语义、同一个安全姿态**：明文已在输入里，脚本直接读 `$decrypted`。js 族内 goja/qjs 也因此天然一致（不依赖任何引擎特有的 crypto）。
+两族**同一个模型、同一份数据语义、同一个安全姿态**：明文已在输入里，脚本直接读 `$credentials`。js 族内 goja/qjs 也因此天然一致（不依赖任何引擎特有的 crypto）。
 
 ### 6.4 安全约束
 
 > [SEC-LOGIC] 凭证安全
 
 - 密钥**永不**出现在脚本源码、DSL、`globals`、stdin 或脚本/guest 内存中——仅在 `decrypt.go` 解密的瞬间存在于宿主侧。
-- `$decrypted` 是明文，按业务数据对待：它会进入 `globals` / stdin，故**与普通业务数据同级**，可被脚本读取、可能被脚本写入输出（这是预期——明文本就是脚本要用的数据）。
+- `$credentials` 是明文，按业务数据对待：它会进入 `globals` / stdin，故**与普通业务数据同级**，可被脚本读取、可能被脚本写入输出（这是预期——明文本就是脚本要用的数据）。
 - 解密失败返回通用错误（配置错误走 Go error，见 §7.4），**绝不**回显 key / iv / 密文/明文片段。
-- 仅 `decrypt` 指令显式列出的凭证会被使用；无指令则 `$decrypted` 为空对象。
+- 仅 `decrypt` 指令显式列出的凭证会被使用；无指令则 `$credentials` 为空对象。
 
 > 本模型消除了"密钥进沙箱内存"的整条权衡：因为密钥从不进沙箱，wasm 的 stdin 注入也只含明文，与业务 input 同级——无需 input/credential 分离、无需输出 scrub。
 
@@ -213,20 +213,20 @@ Descriptor：
 - Inputs：`main`
 - Outputs：`main` + `error`
 
-`RawParams()` 仅输出非默认字段（与 http/function 节点惯例一致）。`init()` 自注册到全局节点 registry。凭证经 `decrypt` 指令在脚本运行前预解密为 `$decrypted`（见 §6），密钥不进脚本。
+`RawParams()` 仅输出非默认字段（与 http/function 节点惯例一致）。`init()` 自注册到全局节点 registry。凭证经 `decrypt` 指令在脚本运行前预解密为 `$credentials`（见 §6），密钥不进脚本。
 
 ## 9. 测试策略
 
 引擎层（`script/js`、`script/wasm`）：
 
-- **js**：完成值提取（对象/标量/null）、全局访问（含 `$decrypted`）、`$helpers.base64` 往返、超时打断死循环、沙箱断言（`require`/`fetch`/`process`/`XMLHttpRequest` 为 undefined）、池复用隔离（`var` 泄漏不跨执行）、**goja 与 qjs 跑同一组用例并断言 `$helpers` 暴露完全一致**
-- **wasm**：用一个最小测试模块（读 stdin JSON、写 stdout JSON）验证 I/O 往返、输出映射、`$decrypted` 经 stdin 可被 guest 读取、超时由 ctx 中断、沙箱断言（无 FS/preopen 时文件操作失败）、模块编译缓存命中
+- **js**：完成值提取（对象/标量/null）、全局访问（含 `$credentials`）、`$helpers.base64` 往返、超时打断死循环、沙箱断言（`require`/`fetch`/`process`/`XMLHttpRequest` 为 undefined）、池复用隔离（`var` 泄漏不跨执行）、**goja 与 qjs 跑同一组用例并断言 `$helpers` 暴露完全一致**
+- **wasm**：用一个最小测试模块（读 stdin JSON、写 stdout JSON）验证 I/O 往返、输出映射、`$credentials` 经 stdin 可被 guest 读取、超时由 ctx 中断、沙箱断言（无 FS/preopen 时文件操作失败）、模块编译缓存命中
 
 预解密层（`script/decrypt.go`，语言无关）：
 
-- 按指令取密文 → 解密 → 写 `$decrypted[name]`，明文正确
+- 按指令取密文 → 解密 → 写 `$credentials[name]`，明文正确
 - 凭证缺失 / 密文格式错误 / 解密失败 → Go error，且错误不回显 key/iv/密文/明文
-- 无 decrypt 指令时 `$decrypted` 为空对象
+- 无 decrypt 指令时 `$credentials` 为空对象
 - **关键不变量：`globals` / stdin 中不含任何密钥**（断言序列化后的输入不出现凭证密钥值）
 
 节点层（`nodes/node`）：
@@ -234,7 +234,7 @@ Descriptor：
 - Descriptor 正确性、`RawParams()` 往返
 - 成功 → main 端口、运行时错误 → error 端口、缺 code → Go error
 - runtime 选择：goja / qjs / wazero 分别可执行
-- 两族一致性：同一 `decrypt` 指令在 js 与 wasm 下，脚本读到的 `$decrypted` 明文一致
+- 两族一致性：同一 `decrypt` 指令在 js 与 wasm 下，脚本读到的 `$credentials` 明文一致
 
 ## 10. 已知限制
 
