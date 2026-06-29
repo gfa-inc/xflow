@@ -98,18 +98,20 @@ func Lookup(language, runtime string) (Engine, bool)
 | `$params` | `input.Params`（节点参数） |
 | `$runtime` | 每次执行的 runtime 上下文（含 `vars`） |
 | `$credentials` | 声明 name → 凭证值的映射（见 §6），无 `credentials` 声明时为空对象 |
+| `$credential` | 第一个声明的凭证值（`$credentials` 中首项的便捷别名），无声明时为 `null` |
 
 脚本最后一个表达式的求值结果即输出：
 
 ```js
-var token = $credentials.api_token.token;   // 凭证值由宿主按名解析注入
+var key = $credential.key;                  // 单凭证场景：直接读首个凭证，免 name 索引
+var token = $credentials.api_token.token;   // 多凭证场景：按 name 区分
 ({ status: 'ok', len: token.length })        // 该对象即 Output.Data
 ```
 
 ### 5.2 wasm 语言族：WASI + stdin/stdout JSON
 
 - `code` 为 base64 编码的预编译 WASI 模块（Rust / TinyGo / AssemblyScript 等标准工具链产物）。
-- 宿主把输入对象（结构同 §5.1 的全局表，**含 `$credentials`**，封装为单个 JSON 对象）写入 guest **stdin**。
+- 宿主把输入对象（结构同 §5.1 的全局表，**含 `$credentials` 与 `$credential`**，封装为单个 JSON 对象）写入 guest **stdin**。
 - guest 处理后把输出 JSON 写入 **stdout**，宿主读取并解析为输出对象。
 - wazero **不挂载** preopen / FS / clock / random / 环境变量 → 仍是沙箱（详见 §7）。
 
@@ -132,6 +134,8 @@ node.Script(code).Credentials("aes_key", "api_token")
 ```
 
 执行顺序：脚本运行**之前**，节点层对每个声明的 name 调 `Input.Credential(name)` 取凭证值，写入 `$credentials[name]`。`$credentials.aes_key` 即该凭证的值（如 `{key, iv, mode}` 或 `{token}`，结构由凭证类型决定）。
+
+**单数便捷别名 `$credential`**：指向 `credentials` 数组**声明顺序的首项**凭证值，等价于 `$credentials[第一个声明的 name]`。单凭证场景（最常见）可直接 `$credential.key`，免去 name 索引，理解成本对齐 n8n 的扁平 `$credentials.field`；多凭证场景仍用 `$credentials[name]` 区分。无声明时 `$credential` 为 `null`。两个全局始终同时提供，js / wasm 一致。
 
 ### 6.2 凭证类型机制
 
@@ -213,12 +217,13 @@ Descriptor：
 
 引擎层（`script/js`、`script/wasm`）：
 
-- **js**：完成值提取（对象/标量/null）、全局访问（含 `$credentials`）、`$helpers.base64` 往返、超时打断死循环、沙箱断言（`require`/`fetch`/`process`/`XMLHttpRequest` 为 undefined）、池复用隔离（`var` 泄漏不跨执行）、**goja 与 qjs 跑同一组用例并断言 `$helpers` 暴露完全一致**
-- **wasm**：用一个最小测试模块（读 stdin JSON、写 stdout JSON）验证 I/O 往返、输出映射、`$credentials` 经 stdin 可被 guest 读取、超时由 ctx 中断、沙箱断言（无 FS/preopen 时文件操作失败）、模块编译缓存命中
+- **js**：完成值提取（对象/标量/null）、全局访问（含 `$credentials` 与 `$credential`）、`$helpers.base64` 往返、超时打断死循环、沙箱断言（`require`/`fetch`/`process`/`XMLHttpRequest` 为 undefined）、池复用隔离（`var` 泄漏不跨执行）、**goja 与 qjs 跑同一组用例并断言 `$helpers` 暴露完全一致**
+- **wasm**：用一个最小测试模块（读 stdin JSON、写 stdout JSON）验证 I/O 往返、输出映射、`$credentials` / `$credential` 经 stdin 可被 guest 读取、超时由 ctx 中断、沙箱断言（无 FS/preopen 时文件操作失败）、模块编译缓存命中
 
 凭证解析层（`script/credentials.go`，语言无关）：
 
 - 按声明的 name 调 `Input.Credential(name)` → 写 `$credentials[name]`，凭证值正确
+- `$credential` 指向声明顺序首项；无声明时为 `null`
 - name 不存在 / resolver 报错 → Go error，且错误不回显凭证值
 - 无 `credentials` 声明时 `$credentials` 为空对象
 - **闸门不变量：仅声明的 name 出现在 `$credentials`，未声明的凭证不可见**
@@ -228,7 +233,7 @@ Descriptor：
 - Descriptor 正确性、`RawParams()` 往返
 - 成功 → main 端口、运行时错误 → error 端口、缺 code → Go error
 - runtime 选择：goja / qjs / wazero 分别可执行
-- 两族一致性：同一 `credentials` 声明在 js 与 wasm 下，脚本读到的 `$credentials` 凭证值一致
+- 两族一致性：同一 `credentials` 声明在 js 与 wasm 下，脚本读到的 `$credentials` / `$credential` 凭证值一致
 
 ## 10. 已知限制
 
