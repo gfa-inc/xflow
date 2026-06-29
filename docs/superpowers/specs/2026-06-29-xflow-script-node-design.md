@@ -149,12 +149,27 @@ $helpers.aes.decrypt(ciphertext, key, iv, mode?)   // AES 解密（js 族始终�
 
 > [SEC-LOGIC] 凭证安全
 
+**基础约束（两族）：**
+
 - 仅注入节点 Descriptor 显式声明的凭证，且按需取用。
 - `$helpers.aes` 失败时返回通用错误，**绝不**回显 key / iv / 明文片段。
 - js 路径仅注入 `$helpers`（credential / base64 / aes），不挂载任何 IO 能力；wasm 路径仅经 stdin 注入凭证数据，不绑定 host 函数。
 
+**凭证与可观测 input 分离（wasm 平台侧根治）：**
+
+wasm 的 `$credentials` 是**数据**，与业务 input 同处一份 JSON，存在经引擎持久化/日志/trace 泄漏的风险（StateStore 落 Redis/MySQL、`TraceID` 链路记录等）——密钥会明文外泄，违反 security-detail 日志黑名单。因此节点层必须构造两份视图：
+
+- `logicalInput`：业务数据，**唯一**用于 persist / log / trace 的视图，**不含** `$credentials`。
+- `wireInput = logicalInput + $credentials`：**仅**用于写 guest stdin（内存 `bytes.Reader`，绝不落临时文件、绝不被宿主日志打印）。`$credentials` 只在写 stdin 的瞬间存在，guest 退出即释放。
+
+> js 路径无此 vector：`$helpers.credential(name)` 是函数调用，密钥只在脚本主动调用时进 JS 堆，JS 堆不进 StateStore / 日志。
+
+**输出 scrub（两族对称）：**
+
+脚本/guest 若把凭证值写进输出（js 把 `$helpers.credential()` 返回值塞进返回对象、wasm 把 `$credentials` echo 进 stdout）即泄漏到 `Output.Data` → 下游 → 落库。这是脚本可信度问题、非平台漏洞，两族同等。缓解：宿主在把结果映射成 `Output.Data` 前，扫描输出中是否出现等于已注入凭证值的内容，命中则剔除/拒绝并记错（不回显密钥本身）。**js 与 wasm 套用同一层 scrub**。文档明确：凭证值不得写入节点输出。
+
 > [!WARNING] [SEC-LOGIC:WARN]
-> **密钥进入沙箱内存（两族一致的已知权衡）**：`$helpers.credential` / `$credentials` 把密钥本身交给脚本/guest 自行解密，因此密钥会进入沙箱内存——js 与 wasm 姿态统一。沙箱禁 IO / 网络，密钥无法外泄，故非漏洞；但弱于“宿主代解密、密钥不出宿主”的模式。缓解：仅注入显式声明的凭证。若需“密钥绝不进脚本”的强隔离，应在宿主侧预解密后以普通数据传入，不要用 credential 工具。
+> **密钥进入沙箱内存（两族一致的已知权衡）**：`$helpers.credential` / `$credentials` 把密钥本身交给脚本/guest 自行解密，因此密钥会进入沙箱内存——js 与 wasm 姿态统一。沙箱禁 IO / 网络 + 每次执行隔离实例（§7.2，无跨执行残留），密钥无法外泄，故非漏洞；但弱于“宿主代解密、密钥不出宿主”的模式。缓解：仅注入显式声明的凭证 + 输出 scrub。若需“密钥绝不进脚本”的强隔离，应在宿主侧预解密后以普通数据传入，不要用 credential 工具。
 
 ## 7. 沙箱、池化、超时
 
@@ -215,6 +230,8 @@ Descriptor：
 - 成功 → main 端口、运行时错误 → error 端口、缺 code → Go error
 - runtime 选择：goja / qjs / wazero 分别可执行
 - 凭证流向：两族凭证均源于声明项；js 经 `$helpers.credential` host 函数、wasm 经 stdin JSON 的 `$credentials` 字段；未声明的凭证不可获取
+- **凭证/logical-input 分离（wasm）**：持久化/日志/trace 用的 logicalInput 不含 `$credentials`；仅 wireInput 含，且只用于写 stdin
+- **输出 scrub（两族）**：脚本把凭证值写入输出时，宿主在映射成 `Output.Data` 前剔除/拒绝并记错，密钥不进下游
 
 ## 10. 已知限制
 
