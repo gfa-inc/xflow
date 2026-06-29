@@ -30,7 +30,7 @@
 nodes/node/script.go                 # ScriptNode（package node）：节点层，组装 DSL 契约
 nodes/node/script/                    # package script —— 语言无关层
   ├── engine.go                       # Engine 接口 + (language, runtime) 注册表
-  ├── helpers.go                      # getCredential / base64 / aes 纯 Go 核心逻辑（语言无关）
+  ├── helpers.go                      # Helpers 接口实现：Credential / base64 / aes 纯 Go 核心逻辑（语言无关）
   ├── js/                             # package js —— language=js
   │   ├── js.go                       # JS 公共层：全局注入、完成值提取、helper 绑定约定
   │   ├── goja.go                     # runtime=goja：sync.Pool + 程序缓存
@@ -46,7 +46,7 @@ nodes/node/script/                    # package script —— 语言无关层
 
 - `nodes/node/database.go`、`grpc.go` 已使 `nodes/node` 携带重依赖（mysql/grpc），故 goja/qjs/wazero 放此层合规。`engine/` 完全不受影响，依赖约束不破坏。
 - 把引擎实现隔离进子包 `script/js/`、`script/wasm/`，节点文件 `script.go` 只依赖 `script.Engine` 接口，依赖边界清晰。
-- helper 的**核心逻辑**（getCredential 凭证解析、base64、aes 解密）是纯 Go，放语言无关的 `script/helpers.go`。js 路径把 `getCredential`（+ base64、可选 aes 兜底）绑定为 runtime 内 host 对象；wasm 路径用 `getCredential` 把声明的凭证序列化进 stdin JSON。
+- helper 的**核心逻辑**（凭证解析、base64、aes 解密）是纯 Go，放语言无关的 `script/helpers.go`。js 路径把它绑定为 JS 全局 `$helpers`（`credential` + `base64` + `aes`，由 `js.go` 在族层面定义、goja/qjs 一致）；wasm 路径用它把声明的凭证序列化进 stdin JSON。
 
 ## 4. Engine 接口与注册表
 
@@ -70,10 +70,10 @@ func Lookup(language, runtime string) (Engine, bool)
 |------|---------|-----------|
 | `code` | JS 源码文本 | base64 预编译 wasm 模块 |
 | `globals` | 注入为 JS 全局变量 | 序列化为 JSON 写入 guest stdin |
-| `h Helpers` | 绑定 `getCredential`（+ base64、可选 aesDecrypt 兜底）为 runtime 内 host 对象 | 用 `getCredential` 把声明的凭证注入 stdin JSON |
+| `h Helpers` | 绑定为 JS 全局 `$helpers`（`credential` + `base64` + `aes`，族内 goja/qjs 一致） | 不绑定 host 函数；声明的凭证经 stdin JSON 的 `$credentials` 字段注入 |
 | 返回值 | 脚本最后一个表达式的求值结果 | 从 guest stdout 读取的 JSON |
 
-`Helpers` 是语言无关的工具集合接口，核心是 `getCredential(name)`（+ base64 / aes 纯 Go 实现）。两个语言族都用 `getCredential` 获取凭证；具体绑定方式见 §6。
+`Helpers` 是语言无关的工具集合接口，核心是 `Credential(name)`（+ base64 / aes 纯 Go 实现）。js 路径绑定为 `$helpers` 全局命名空间；wasm 路径用它把声明的凭证序列化进 stdin JSON。具体见 §6。
 
 ### qjs / cgo 隔离
 
@@ -119,31 +119,42 @@ var order = $input.order;
 
 ## 6. 凭证获取与工具函数
 
-核心模型：两个语言族都通过 **`getCredential(name)`** 获取凭证（密钥）。AES 解密尽量交给 runtime 自身——**runtime 原生支持 AES 时不提供 aesDecrypt helper**，脚本自行用凭证密钥解密；仅当 runtime 无原生 AES 时才提供 `aesDecrypt` 兜底。
+js 路径把工具集合绑定为单一全局命名空间 **`$helpers`**（与 `$input`/`$vars` 的 `$` 前缀惯例一致，自解释、避免污染顶层）：
 
-凭证仅限**节点 Descriptor 显式声明**的项（最小暴露面）。`getCredential(name)` 返回 `{key, iv, mode, ...}`（key/iv 为 base64）。
+```js
+$helpers.credential(name)              // 取声明的凭证 → {key, iv, mode, ...}
+$helpers.base64.encode(s) / .decode(s)
+$helpers.aes.decrypt(ciphertext, key, iv, mode?)   // AES 解密（js 族始终提供）
+```
+
+> **族内一致性原则**：`$helpers` 契约定义在**语言族层面**（`js.go`），同族所有 runtime 绑定**完全相同**的 helper 集合。脚本在 goja 上能用的 `$helpers.*`，换到 qjs 必须同样可用——否则同一段 js 脚本换引擎就跑不了。
+
+因此整个 **js 族始终暴露 `$helpers.aes`**：它由纯 Go 的 `helpers.go` 支撑，goja 和 qjs 绑定同一个 Go host 函数。该兜底的存在**不**取决于单个引擎是否带原生 WebCrypto——即便 qjs 自带 WebCrypto，那只是脚本可选的额外原生能力，`$helpers.aes` 依然存在以保证族内一致。`$helpers.credential` / `$helpers.base64` 同理，全族始终提供。
+
+凭证仅限**节点 Descriptor 显式声明**的项（最小暴露面）。`$helpers.credential(name)` 返回 `{key, iv, mode, ...}`（key/iv 为 base64）。
+
+> 跨语言族暴露不同是预期的（执行模型本就不同，见下）；一致性约束只在**族内**。`$helpers` 是 **JS 专属**——host 函数只能绑进 JS runtime。wasm guest 调不了 host 函数，凭证以**数据**形式经 stdin JSON 的 `$credentials` 字段传入，guest 用自带 crypto 解密。两族凭证来源语义统一（都源于声明的凭证），只是 js 是函数调用、wasm 是数据读取。
 
 ### 6.1 各语言族绑定
 
-| 语言族 / runtime | getCredential | AES | base64 |
-|------------------|---------------|-----|--------|
-| js / goja | host 函数注入 | goja 无原生 AES → 提供 `aesDecrypt` 兜底 | host 函数注入（goja 无 atob/btoa） |
-| js / qjs | host 函数注入 | 依 qjs 是否带 WebCrypto 决定是否提供兜底（实现阶段核实） | 同上 |
-| wasm / wazero | 声明的凭证随 stdin JSON 注入（字段如 `$credentials`） | guest 自带 crypto，不提供 | guest 自带 |
+| 语言族 | 凭证获取 | AES | base64 | 族内一致性 |
+|--------|----------|-----|--------|------------|
+| js（goja + qjs） | `$helpers.credential(name)` host 函数 | `$helpers.aes`（Go 支撑，goja/qjs 相同） | `$helpers.base64`（Go 支撑，goja/qjs 相同） | 两引擎绑定完全相同的 `$helpers` |
+| wasm（wazero） | stdin JSON 的 `$credentials` 字段 | guest 自带 crypto，不提供 | guest 自带 | 单引擎 |
 
-- **js**：`getCredential` 作为 host 对象绑定，脚本调用 `getCredential("db_key")` 拿到 `{key, iv}`，再自行解密（goja 调兜底 `aesDecrypt`）。
-- **wasm**：guest 自包含，宿主不绑定 host 函数；`getCredential` 在节点层执行，把声明的凭证序列化进 stdin JSON，guest 从输入读取后用自带 crypto 解密。
+- **js**：脚本 `var c = $helpers.credential("db_key"); var plain = $helpers.aes.decrypt(ct, c.key, c.iv)`。goja、qjs 行为一致；qjs 若另有原生 WebCrypto，脚本可选用，但不影响 `$helpers` 契约。
+- **wasm**：guest 自包含，宿主不绑定 host 函数；节点层把声明的凭证序列化进 stdin JSON 的 `$credentials`，guest 读取后用自带 crypto 解密。
 
 ### 6.2 安全约束
 
 > [SEC-LOGIC] 凭证安全
 
 - 仅注入节点 Descriptor 显式声明的凭证，且按需取用。
-- aesDecrypt 兜底（若提供）失败时返回通用错误，**绝不**回显 key / iv / 明文片段。
-- js 路径仅注入 `getCredential` / `base64` /（可选）`aesDecrypt`，不挂载任何 IO 能力；wasm 路径仅经 stdin 注入凭证数据，不绑定 host 函数。
+- `$helpers.aes` 失败时返回通用错误，**绝不**回显 key / iv / 明文片段。
+- js 路径仅注入 `$helpers`（credential / base64 / aes），不挂载任何 IO 能力；wasm 路径仅经 stdin 注入凭证数据，不绑定 host 函数。
 
 > [!WARNING] [SEC-LOGIC:WARN]
-> **密钥进入沙箱内存（两族一致的已知权衡）**：`getCredential` 把密钥本身交给脚本/guest 自行解密，因此密钥会进入沙箱内存——js 与 wasm 姿态统一。沙箱禁 IO / 网络，密钥无法外泄，故非漏洞；但弱于“宿主代解密、密钥不出宿主”的模式。缓解：仅注入显式声明的凭证。若需“密钥绝不进脚本”的强隔离，应在宿主侧预解密后以普通数据传入，不要用 getCredential。
+> **密钥进入沙箱内存（两族一致的已知权衡）**：`$helpers.credential` / `$credentials` 把密钥本身交给脚本/guest 自行解密，因此密钥会进入沙箱内存——js 与 wasm 姿态统一。沙箱禁 IO / 网络，密钥无法外泄，故非漏洞；但弱于“宿主代解密、密钥不出宿主”的模式。缓解：仅注入显式声明的凭证。若需“密钥绝不进脚本”的强隔离，应在宿主侧预解密后以普通数据传入，不要用 credential 工具。
 
 ## 7. 沙箱、池化、超时
 
@@ -189,13 +200,13 @@ Descriptor：
 - Inputs：`main`
 - Outputs：`main` + `error`
 
-`RawParams()` 仅输出非默认字段（与 http/function 节点惯例一致）。`init()` 自注册到全局节点 registry。凭证声明走 Descriptor.Credentials；两族据此决定 `getCredential` 可取哪些凭证。
+`RawParams()` 仅输出非默认字段（与 http/function 节点惯例一致）。`init()` 自注册到全局节点 registry。凭证声明走 Descriptor.Credentials；两族据此决定 `$helpers.credential` / `$credentials` 可取哪些凭证。
 
 ## 9. 测试策略
 
 引擎层（`script/js`、`script/wasm`）：
 
-- **js**：完成值提取（对象/标量/null）、全局访问、base64 往返、`getCredential` 取回声明凭证、用凭证密钥解密（goja 走 `aesDecrypt` 兜底、解密正确、错误不回显密钥）、超时打断死循环、沙箱断言（`require`/`fetch`/`process`/`XMLHttpRequest` 为 undefined）、池复用隔离（`var` 泄漏不跨执行）、goja 与 qjs 跑同一组用例
+- **js**：完成值提取（对象/标量/null）、全局访问、`$helpers.base64` 往返、`$helpers.credential` 取回声明凭证、`$helpers.aes` 解密（解密正确、错误不回显密钥）、超时打断死循环、沙箱断言（`require`/`fetch`/`process`/`XMLHttpRequest` 为 undefined）、池复用隔离（`var` 泄漏不跨执行）、**goja 与 qjs 跑同一组用例并断言 `$helpers` 暴露完全一致**
 - **wasm**：用一个最小测试模块（读 stdin JSON、写 stdout JSON）验证 I/O 往返、输出映射、超时由 ctx 中断、沙箱断言（无 FS/preopen 时文件操作失败）、模块编译缓存命中、声明的凭证经 stdin JSON 注入可被 guest 读取并解密
 
 节点层（`nodes/node`）：
@@ -203,7 +214,7 @@ Descriptor：
 - Descriptor 正确性、`RawParams()` 往返
 - 成功 → main 端口、运行时错误 → error 端口、缺 code → Go error
 - runtime 选择：goja / qjs / wazero 分别可执行
-- 凭证流向：两族都通过 `getCredential` 取声明的凭证；js 绑定为 host 函数、wasm 经 stdin JSON 注入；未声明的凭证不可获取
+- 凭证流向：两族凭证均源于声明项；js 经 `$helpers.credential` host 函数、wasm 经 stdin JSON 的 `$credentials` 字段；未声明的凭证不可获取
 
 ## 10. 已知限制
 
