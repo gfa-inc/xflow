@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Common Commands
 
@@ -20,13 +20,12 @@ golangci-lint run        # Lint
 - **store/** — Public persistence interfaces + domain models
   - `memstore/` — in-memory implementation (test / local)
   - `sqlstore/` — dialect-agnostic GORM implementation; `sqlstore/mysqlstore/` — MySQL dialect entry (`mysqlstore.New`)
-- **execution/** — Reusable execution boundary: Dispatcher, Executor, embedded Runner, handler Registry
-- **backend/** — Reusable backend abstractions and implementations
-  - `backend.go` — `Provider` and optional backend capabilities
-  - `memory/` — in-memory StateStore + goroutine pool TaskQueue + embedded lifecycle binding
-  - `asynq/` — Redis StateStore + Asynq TaskQueue + embedded lifecycle binding
+- **backend/** — Reusable backend providers and implementations
+  - `memory/` — In-memory StateStore + goroutine pool TaskQueue
+  - `asynq/` — Redis StateStore + Asynq TaskQueue
+- **execution/** — Reusable embedded task execution boundary: Dispatcher, Runner, Registry
 - **sdk/** — Public SDK grouping
-  - `xflow/` — `package xflow`: `NewLocal` / `NewCluster` factories, WorkflowBuilder (import path末段=包名)
+  - `xflow/` — `package xflow`: `NewLocal` / `NewCluster` factories, WorkflowBuilder, and production control APIs (`Submit`, `Wait`, `Signal`, `RevokeSignal`, `Cancel`, `Inspect`)
   - `examples/` — runnable `.go` usage examples
 - **cmd/server/** — Management server (Master node)
 - **cmd/runner/** — Task runner (Execution node)
@@ -36,8 +35,6 @@ golangci-lint run        # Lint
 ## Key Constraints
 
 - `engine/` must NOT import redis/asynq/mysql/sql — only stdlib + types + nodes/node
-- `execution/` and `backend/memory/` must remain free of Redis/Asynq/MySQL/network dependencies
-- SDK should assemble reusable backend providers; server/runner code must not depend on SDK internals
 - Graph IR is immutable after compile, shared lock-free at runtime
 - Engine Core depends on exactly 2 interfaces: `StateStore` + `TaskQueue`
 - Future server/runner code goes under `service/` (a future module boundary); core packages (engine/nodes/types/store/sdk) must NEVER import `service/` or `cmd/` — dependencies flow one way only, so a later module split stays mechanical
