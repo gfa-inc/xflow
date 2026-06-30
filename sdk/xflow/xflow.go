@@ -10,7 +10,6 @@ import (
 	backendasynq "github.com/gfa-inc/xflow/backend/asynq"
 	backendmemory "github.com/gfa-inc/xflow/backend/memory"
 	"github.com/gfa-inc/xflow/engine"
-	"github.com/gfa-inc/xflow/engine/graph"
 	"github.com/gfa-inc/xflow/execution"
 	"github.com/gfa-inc/xflow/nodes/node"
 	"github.com/gfa-inc/xflow/types"
@@ -168,45 +167,6 @@ func (e *Engine) registerNodeDefinitions(defs []node.Handler) error {
 		}
 	}
 	return nil
-}
-
-// Submit builds the workflow definition and starts an asynchronous execution.
-//
-// params become the input.Data for DAG root nodes. In cyclic workflows they
-// first flow through the required xflow.start node. Submit registers typed
-// handlers declared by the builder in the current process before compiling, so
-// local examples can run immediately; separate cluster consumers still need
-// WithNodes.
-func (e *Engine) Submit(ctx context.Context, wf *WorkflowBuilder, params map[string]any, opts ...SubmitOption) (types.ExecutionID, error) {
-	cfg := &submitConfig{}
-	for _, o := range opts {
-		o(cfg)
-	}
-
-	def, err := wf.build()
-	if err != nil {
-		return "", err
-	}
-
-	if err := e.registerWorkflowHandlers(wf); err != nil {
-		return "", err
-	}
-
-	if err := e.registerDirectHandlers(wf); err != nil {
-		return "", err
-	}
-
-	g, err := graph.Compile(def)
-	if err != nil {
-		return "", err
-	}
-
-	if cfg.execTTL > 0 {
-		ctx = engine.WithExecutionTTL(ctx, cfg.execTTL)
-	}
-	ctx = engine.WithWorkflowDef(ctx, def)
-
-	return e.eng.Submit(ctx, g, params, cfg.runtime)
 }
 
 func (e *Engine) registerDirectHandlers(wf *WorkflowBuilder) error {
