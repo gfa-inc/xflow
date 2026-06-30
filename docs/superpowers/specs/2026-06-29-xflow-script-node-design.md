@@ -20,7 +20,7 @@
 - **language**：执行语言族（`js` | `wasm`）
 - **runtime**：在某语言族内选择具体引擎（`js` → `goja` | `qjs`；`wasm` → `wazero`）
 
-默认 `language=js`，`runtime=goja`。`language=wasm` 时 runtime 默认且当前仅 `wazero`。
+`language` 与 `runtime` **均无默认**，调用方必须显式选择：`language` ∈ {`js`, `wasm`}，`runtime` 由 `language` 决定支持集合（`js` -> `goja | qjs`、`wasm` -> `wazero`）。任一缺失时节点返回 config error，避免性能/安全取舍被默认值悄悄替用户做出。
 
 > js 与 wasm 是**根本不同的执行模型**：js 靠注入全局变量 + 取完成值返回；wasm 是预编译二进制，通过 WASI stdin/stdout 的 JSON ABI 与宿主交换数据。两者共用 `script.Engine` 抽象，但 I/O 机制不同（见 §5）。**凭证则两族完全一致**：节点按名预声明，宿主把凭证值注入 `$credentials`（见 §6）。
 
@@ -182,11 +182,12 @@ node.Script(code).Credentials("aes_key", "api_token")
 ### 7.3 超时
 
 - `input.Timeout > 0` 时派生 `context.WithTimeout`。
-- **js**：watcher goroutine 在 `ctx.Done()` 调 `vm.Interrupt("timeout")` 打断死循环；QuickJS 用其 interrupt handler 对等实现。
-- **wasm**：wazero 原生支持 `context` 取消，超时由 ctx 驱动中断模块执行。
+- **js/goja**：watcher goroutine 在 `ctx.Done()` 调 `vm.Interrupt("timeout")`。**已知限制**：goja 的 Interrupt 仅在函数调用边界检查，**无法**打断纯计算死循环（如 `while(true){}`、`for(let i=0;;i++){}`）。CPU 重或可能无界的脚本必须改用 `js/qjs` 或 `wasm/wazero`，它们支持真正的执行中终止。
+- **js/qjs**：`CloseOnContextDone: true` 在 ctx 取消时拆除底层 wasm 模块，能打断任何脚本（含纯计算）。
+- **wasm**：wazero 原生支持 `context` 取消（`WithCloseOnContextDone`），超时由 ctx 驱动中断模块执行；纯 CPU loop 同样可被打断。
 
 > [!WARNING] [SEC-LOGIC:WARN]
-> goja 无内置内存上限，超时仅能打断 CPU 死循环、无法拦截内存炸弹（如 `[].length = 1e9`）。本设计加入**脚本/模块体积上限**作为基础防护；wazero 可配置内存上限（max pages），wasm 路径据此设硬上限。js 路径内存硬限制作为**已知限制**记录。
+> 各引擎已配置资源上限（goja: `SetMaxCallStackSize=2048`；wazero: `WithMemoryLimitPages=256` ≈ 16MiB；qjs: `MemoryLimit=16MiB` + `MaxStackSize=256KiB`；节点层: 输出 ≤ 1MiB）。**但 goja 仍存在纯计算死循环不可中断的固有限制** —— 选型时需根据脚本可信度与计算特征切换运行时。
 
 ### 7.4 错误分类
 
@@ -198,20 +199,20 @@ node.Script(code).Credentials("aes_key", "api_token")
 ## 8. 节点 API 与 Descriptor
 
 ```go
-node.Script(`({result: $input.x * 2})`)        // 默认 language=js, runtime=goja
-node.Script(code).Runtime("qjs")
-node.Script(b64wasm).Language("wasm")           // runtime 默认 wazero
-node.Script(code).Credentials("aes_key", "api_token")   // 按名预声明凭证
+node.Script(code).Language("js").Runtime("goja")                  // 必须显式指定
+node.Script(code).Language("js").Runtime("qjs")
+node.Script(b64wasm).Language("wasm").Runtime("wazero")
+node.Script(code).Language("js").Runtime("goja").Credentials("aes_key", "api_token")
 ```
 
 Descriptor：
 
 - `Type` = `xflow.script`
-- Params：`language`（默认 `js`）/ `runtime`（默认 `goja`）/ `code`（必填，string）/ `credentials`（string 数组，默认空，声明本实例可用的凭证 name）
+- Params：`language`（必填，`js | wasm`，**无默认**）/ `runtime`（必填，`js -> goja|qjs`、`wasm -> wazero`，**无默认**）/ `code`（必填，string）/ `credentials`（string 数组，默认空，声明本实例可用的凭证 name）
 - Inputs：`main`
 - Outputs：`main` + `error`
 
-`RawParams()` 仅输出非默认字段（与 http/function 节点惯例一致）。`init()` 自注册到全局节点 registry。凭证按 `credentials` 声明的 name 在脚本运行前解析为 `$credentials`（见 §6）。
+**无隐式默认**：调用方必须显式选择 `language` 与 `runtime`，让性能/安全的取舍永远是有意识的决定。任一缺失时 `Execute` 返回 Go config error。`RawParams()` 总是回写 `language`/`runtime`（即使为空也透传，方便排错）。`init()` 自注册到全局节点 registry。凭证按 `credentials` 声明的 name 在脚本运行前解析为 `$credentials`（见 §6）。
 
 ## 9. 测试策略
 
