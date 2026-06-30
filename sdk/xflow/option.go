@@ -5,6 +5,7 @@ import (
 
 	"github.com/gfa-inc/xflow/backend"
 	"github.com/gfa-inc/xflow/engine"
+	"github.com/gfa-inc/xflow/execution"
 	"github.com/gfa-inc/xflow/nodes/node"
 	"github.com/gfa-inc/xflow/store"
 	"github.com/gfa-inc/xflow/types"
@@ -48,6 +49,9 @@ type engineConfig struct {
 	stopFns     []func()
 
 	allowDirectHandlers bool
+
+	versionPolicy    execution.VersionPolicy
+	versionPolicySet bool
 }
 
 // WithConcurrency sets the task consumer concurrency.
@@ -89,6 +93,25 @@ func WithLogger(l engine.Logger) Option {
 func WithNodes(defs ...node.Handler) Option {
 	return func(c *engineConfig) {
 		c.nodes = append(c.nodes, defs...)
+	}
+}
+
+// WithVersionPolicy controls how the embedded handler registry responds when
+// a workflow pins a specific handler version that is not registered.
+//
+//   - execution.VersionWarnFallback (default): warn and fall back to the latest
+//     registered handler; safe rollout, surfaces the drift in logs.
+//   - execution.VersionStrict: return an error; recommended once handlers and
+//     workflows are version-aligned.
+//   - execution.VersionSilentFallback: legacy behavior — silent fallback to
+//     the latest handler. Avoid in production.
+//
+// AddWorkflow always pre-checks versions strictly regardless of this option;
+// the policy only affects runtime resolution.
+func WithVersionPolicy(p execution.VersionPolicy) Option {
+	return func(c *engineConfig) {
+		c.versionPolicy = p
+		c.versionPolicySet = true
 	}
 }
 
