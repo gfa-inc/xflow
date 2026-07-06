@@ -2,6 +2,7 @@ package xflow
 
 import (
 	backendmemory "github.com/gfa-inc/xflow/backend/memory"
+	backendtransient "github.com/gfa-inc/xflow/backend/transient"
 	"github.com/gfa-inc/xflow/node/resource"
 	"github.com/gfa-inc/xflow/types"
 )
@@ -26,6 +27,16 @@ func NewLocal(opts ...Option) (*Engine, error) {
 		cfg.concurrency = 4
 	}
 	pool := resolveResourcePool(cfg)
+	if cfg.executionMode == ExecutionModeTransient {
+		transientOpts := []backendtransient.Option{
+			backendtransient.WithConcurrency(cfg.concurrency),
+			backendtransient.WithCompletionTTL(cfg.transientCompletionTTL),
+		}
+		if pool != nil {
+			transientOpts = append(transientOpts, backendtransient.WithResourcePool(pool))
+		}
+		return newFromConfig(cfg, backendtransient.New(transientOpts...))
+	}
 	memOpts := []backendmemory.Option{backendmemory.WithConcurrency(cfg.concurrency)}
 	if pool != nil {
 		memOpts = append(memOpts, backendmemory.WithResourcePool(pool))
