@@ -2,7 +2,8 @@ package xflow
 
 import (
 	backendmemory "github.com/gfa-inc/xflow/backend/memory"
-	"github.com/gfa-inc/xflow/internal/noderuntime"
+	"github.com/gfa-inc/xflow/node/resource"
+	"github.com/gfa-inc/xflow/types"
 )
 
 // NewLocal creates an in-process engine backed by in-memory state and a
@@ -31,6 +32,6 @@ func NewLocal(opts ...Option) (*Engine, error) {
 }
 
 // resolveResourcePool returns the SDK-managed default pool.
-func resolveResourcePool(_ *engineConfig) noderuntime.ResourcePool {
-	return noderuntime.NewDefaultResourcePool(noderuntime.DefaultResourcePoolConfig())
+func resolveResourcePool(_ *engineConfig) types.ResourcePool {
+	return resource.NewDefaultResourcePool(types.DefaultResourcePoolConfig())
 }
