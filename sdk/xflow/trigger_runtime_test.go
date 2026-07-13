@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gfa-inc/xflow/nodes/node"
+	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/types"
 )
 

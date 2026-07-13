@@ -7,7 +7,6 @@ import (
 	"github.com/gfa-inc/xflow/backend"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
-	"github.com/gfa-inc/xflow/nodes/node"
 	"github.com/gfa-inc/xflow/types"
 )
 
@@ -16,7 +15,7 @@ type Option func(*config)
 
 type config struct {
 	concurrency  int
-	resourcePool node.ResourcePool
+	resourcePool execution.ResourcePool
 }
 
 // WithConcurrency sets the number of in-memory queue consumer goroutines. Default is 4.
@@ -32,7 +31,7 @@ func WithConcurrency(n int) Option {
 // DatabaseNode / GRPCNode to reuse *sql.DB / *grpc.ClientConn across
 // invocations. Default is nil: nodes fall back to per-call construction.
 // See .claude/specs/resource-pool.md.
-func WithResourcePool(p node.ResourcePool) Option {
+func WithResourcePool(p execution.ResourcePool) Option {
 	return func(c *config) { c.resourcePool = p }
 }
 
@@ -44,7 +43,7 @@ type Backend struct {
 	registry         *execution.Registry
 	workflowRegistry *workflowRegistry
 	triggerRuntime   *triggerPrimitives
-	resourcePool     node.ResourcePool
+	resourcePool     execution.ResourcePool
 }
 
 // New creates a memory backend with its components but does NOT start the queue.

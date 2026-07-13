@@ -19,7 +19,7 @@ import (
 	"github.com/gfa-inc/xflow/backend/asynq"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
-	"github.com/gfa-inc/xflow/nodes/node"
+	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/service/control"
 	"github.com/gfa-inc/xflow/service/protocol"
 	runnersvc "github.com/gfa-inc/xflow/service/runner"
@@ -29,7 +29,7 @@ import (
 
 type loadHandler struct{}
 
-func (loadHandler) Descriptor() node.Descriptor { return node.Descriptor{Type: "perf.load"} }
+func (loadHandler) Descriptor() types.Descriptor { return types.Descriptor{Type: "perf.load"} }
 func (loadHandler) Execute(_ context.Context, input *types.Input) (*types.Output, error) {
 	return &types.Output{Data: map[string]any{"claim_id": input.Data["claim_id"]}}, nil
 }

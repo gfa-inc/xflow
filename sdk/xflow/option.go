@@ -6,7 +6,6 @@ import (
 	"github.com/gfa-inc/xflow/backend"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
-	"github.com/gfa-inc/xflow/nodes/node"
 	"github.com/gfa-inc/xflow/types"
 )
 
@@ -27,15 +26,11 @@ type engineConfig struct {
 	logger      engine.Logger
 	waiter      backend.Waiter
 	concurrency int
-	nodes       []node.Handler
+	nodes       []types.Handler
 	stopFns     []func()
 
 	versionPolicy    execution.VersionPolicy
 	versionPolicySet bool
-
-	resourcePool       node.ResourcePool
-	resourcePoolSet    bool
-	resourcePoolConfig *node.ResourcePoolConfig
 
 	// local-only: NewCluster always leaves this false; direct handlers are
 	// rejected regardless (see node_registration.go registerDirectHandlers).
@@ -78,30 +73,9 @@ func WithLogger(l engine.Logger) Option {
 // workflow in the current process. WithNodes is still required for cluster
 // worker processes that may execute workflows registered elsewhere, because
 // workers need to resolve node types before seeing the workflow builder.
-func WithNodes(defs ...node.Handler) Option {
+func WithNodes(defs ...types.Handler) Option {
 	return func(c *engineConfig) {
 		c.nodes = append(c.nodes, defs...)
-	}
-}
-
-// WithResourcePool installs a custom node.ResourcePool. By default the SDK
-// creates a default pool (node.NewDefaultResourcePool) so DatabaseNode and
-// GRPCNode reuse connections automatically. Pass nil to disable pooling
-// entirely; nodes will then fall back to per-call construction.
-//
-// See .claude/specs/resource-pool.md.
-func WithResourcePool(p node.ResourcePool) Option {
-	return func(c *engineConfig) {
-		c.resourcePool = p
-		c.resourcePoolSet = true
-	}
-}
-
-// WithResourcePoolConfig customizes the default pool's SQL / gRPC tunables.
-// Ignored when WithResourcePool is also supplied.
-func WithResourcePoolConfig(cfg node.ResourcePoolConfig) Option {
-	return func(c *engineConfig) {
-		c.resourcePoolConfig = &cfg
 	}
 }
 

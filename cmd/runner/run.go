@@ -20,7 +20,7 @@ import (
 
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
-	_ "github.com/gfa-inc/xflow/nodes/node"
+	_ "github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/service/protocol"
 	runnersvc "github.com/gfa-inc/xflow/service/runner"
 	"github.com/spf13/cobra"

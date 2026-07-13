@@ -13,7 +13,6 @@ import (
 	"github.com/gfa-inc/xflow/backend"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
-	"github.com/gfa-inc/xflow/nodes/node"
 	"github.com/gfa-inc/xflow/store"
 	"github.com/gfa-inc/xflow/types"
 )
@@ -30,7 +29,7 @@ type config struct {
 	concurrency   int
 	execTTL       time.Duration
 	consumer      bool
-	resourcePool  node.ResourcePool
+	resourcePool  execution.ResourcePool
 	auditObserver AuditObserver
 	logger        engine.Logger
 }
@@ -65,7 +64,7 @@ func WithConsumer(enabled bool) Option {
 // WithResourcePool installs a process-scope ResourcePool. Worker pods that
 // run DatabaseNode / GRPCNode benefit from a pool; API-only pods (consumer
 // disabled) can leave it nil. See .claude/specs/resource-pool.md.
-func WithResourcePool(p node.ResourcePool) Option {
+func WithResourcePool(p execution.ResourcePool) Option {
 	return func(c *config) { c.resourcePool = p }
 }
 
@@ -106,7 +105,7 @@ type Backend struct {
 	redisAddr      string
 	concurrency    int
 	consumer       bool
-	resourcePool   node.ResourcePool
+	resourcePool   execution.ResourcePool
 	leaderElector  backend.LeaderElector
 }
 

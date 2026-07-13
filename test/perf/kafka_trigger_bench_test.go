@@ -12,7 +12,7 @@ import (
 
 	"github.com/segmentio/kafka-go"
 
-	"github.com/gfa-inc/xflow/nodes/node"
+	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/types"
 )
 
