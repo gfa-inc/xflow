@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gfa-inc/xflow/engine/graph"
-	"github.com/gfa-inc/xflow/nodes/node"
+	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/sdk/xflow"
 	"github.com/gfa-inc/xflow/types"
 )
@@ -21,12 +21,12 @@ import (
 // It immediately returns an empty output without touching any external resource.
 type noopHandler struct{}
 
-func (h *noopHandler) Descriptor() node.Descriptor {
-	return node.Descriptor{Type: "bench.noop"}
+func (h *noopHandler) Descriptor() types.Descriptor {
+	return types.Descriptor{Type: "bench.noop"}
 }
 
-func (h *noopHandler) Execute(_ context.Context, _ *node.Input) (*node.Output, error) {
-	return &node.Output{}, nil
+func (h *noopHandler) Execute(_ context.Context, _ *types.Input) (*types.Output, error) {
+	return &types.Output{}, nil
 }
 
 // ── topology builders: graph.Compile path (pure WorkflowDef) ─────────────────

@@ -8,7 +8,6 @@ import (
 	"github.com/gfa-inc/xflow/backend/memory"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
-	"github.com/gfa-inc/xflow/nodes/node"
 	"github.com/gfa-inc/xflow/types"
 )
 
@@ -135,7 +134,7 @@ func runStateStoreContract(t *testing.T, state engine.StateStore) {
 	if resume != "" || payload != nil {
 		t.Fatalf("pre-delivered signal = (%q, %+v), want stored", resume, payload)
 	}
-	payload, err = state.SuspendOrConsume(ctx, id, "approve", &node.SuspendSpec{Signals: []string{"approval"}})
+	payload, err = state.SuspendOrConsume(ctx, id, "approve", &types.SuspendSpec{Signals: []string{"approval"}})
 	if err != nil {
 		t.Fatalf("SuspendOrConsume() error = %v", err)
 	}

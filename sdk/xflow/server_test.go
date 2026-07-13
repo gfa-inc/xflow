@@ -13,7 +13,6 @@ import (
 
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
-	"github.com/gfa-inc/xflow/nodes/node"
 	"github.com/gfa-inc/xflow/service/control"
 	"github.com/gfa-inc/xflow/service/protocol"
 	runnersvc "github.com/gfa-inc/xflow/service/runner"
@@ -158,8 +157,8 @@ func TestNewServerRedisBackendDispatchesTaskToRunner(t *testing.T) {
 
 type sdkE2EHandler struct{}
 
-func (sdkE2EHandler) Descriptor() node.Descriptor {
-	return node.Descriptor{Type: "test.sdk-e2e"}
+func (sdkE2EHandler) Descriptor() types.Descriptor {
+	return types.Descriptor{Type: "test.sdk-e2e"}
 }
 
 func (sdkE2EHandler) Execute(_ context.Context, input *types.Input) (*types.Output, error) {

@@ -12,7 +12,6 @@ import (
 	"github.com/gfa-inc/xflow/backend/memory"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
-	"github.com/gfa-inc/xflow/nodes/node"
 	"github.com/gfa-inc/xflow/service/protocol"
 	runnersvc "github.com/gfa-inc/xflow/service/runner"
 	"github.com/gfa-inc/xflow/types"
@@ -120,8 +119,8 @@ func submitWorkflow(t *testing.T, baseURL string, wf *types.WorkflowDef, params 
 
 type e2eHandler struct{}
 
-func (e2eHandler) Descriptor() node.Descriptor {
-	return node.Descriptor{Type: "test.e2e"}
+func (e2eHandler) Descriptor() types.Descriptor {
+	return types.Descriptor{Type: "test.e2e"}
 }
 
 func (e2eHandler) Execute(_ context.Context, input *types.Input) (*types.Output, error) {

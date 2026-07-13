@@ -20,7 +20,7 @@ import (
 
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
-	"github.com/gfa-inc/xflow/nodes/node"
+	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/types"
 )
 
@@ -398,7 +398,7 @@ func checkCompletionConvergenceCase(t *testing.T, state engine.StateStore) {
 
 // node1Mode is the suspend mode used by suspendThenDeliverSignalCase. Kept as
 // a package-level var so the cases read cleanly.
-var node1Mode = node.ModeSignal
+var node1Mode = types.ModeSignal
 
 // timeAfter and shortSleep are shimmed so callers can swap in fakes for very
 // long suites if needed; today they delegate to time.After.

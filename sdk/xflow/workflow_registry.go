@@ -7,7 +7,7 @@ import (
 
 	"github.com/gfa-inc/xflow/backend"
 	"github.com/gfa-inc/xflow/engine/graph"
-	"github.com/gfa-inc/xflow/nodes/node"
+	"github.com/gfa-inc/xflow/internal/noderuntime"
 	"github.com/gfa-inc/xflow/types"
 )
 
@@ -111,10 +111,10 @@ func preCheckHandlerVersions(def *types.WorkflowDef, wf *WorkflowBuilder) error 
 				continue
 			}
 			if nd.Version > 0 {
-				if _, ok := node.LookupTriggerVersion(nd.Type, nd.Version); ok {
+				if _, ok := noderuntime.LookupTriggerVersion(nd.Type, nd.Version); ok {
 					continue
 				}
-			} else if _, ok := node.LookupTrigger(nd.Type); ok {
+			} else if _, ok := noderuntime.LookupTrigger(nd.Type); ok {
 				continue
 			}
 			missing = append(missing, HandlerLocator{Type: nd.Type, Version: nd.Version, Kind: types.NodeKindTrigger})
@@ -123,10 +123,10 @@ func preCheckHandlerVersions(def *types.WorkflowDef, wf *WorkflowBuilder) error 
 				continue
 			}
 			if nd.Version > 0 {
-				if _, ok := node.LookupVersion(nd.Type, nd.Version); ok {
+				if _, ok := noderuntime.LookupVersion(nd.Type, nd.Version); ok {
 					continue
 				}
-			} else if _, ok := node.Lookup(nd.Type); ok {
+			} else if _, ok := noderuntime.Lookup(nd.Type); ok {
 				continue
 			}
 			missing = append(missing, HandlerLocator{Type: nd.Type, Version: nd.Version, Kind: types.NodeKindAction})
