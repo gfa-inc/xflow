@@ -10,6 +10,7 @@ import (
 
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
+	"github.com/gfa-inc/xflow/execution"
 	"github.com/gfa-inc/xflow/service/protocol"
 	"github.com/gfa-inc/xflow/types"
 )
@@ -17,11 +18,11 @@ import (
 const SubmitWorkflowPath = "/v1/workflows"
 
 type EngineFacade interface {
+	execution.Engine
 	Submit(ctx context.Context, g *graph.Graph, params map[string]any, runtime ...*types.Runtime) (types.ExecutionID, error)
 	Inspect(ctx context.Context, id types.ExecutionID, nodeNames ...string) (engine.ExecutionDetail, error)
 	DeliverSignal(ctx context.Context, id types.ExecutionID, name string, data map[string]any) error
 	Cancel(ctx context.Context, id types.ExecutionID) error
-	CommitTaskResult(ctx context.Context, lease *engine.TaskLease, result engine.TaskResult) error
 }
 
 type Server struct {
