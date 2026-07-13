@@ -20,7 +20,6 @@ import (
 
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
-	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/types"
 )
 
