@@ -1,15 +1,17 @@
 package flow
 
-import "github.com/gfa-inc/xflow/types"
-
 import (
 	"context"
 	"fmt"
-	. "github.com/gfa-inc/xflow/node/internal"
+
+	"github.com/gfa-inc/xflow/types"
+
 	"slices"
 
+	. "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/internal/utils/conv"
 	"github.com/gfa-inc/xflow/node/internal/utils/exprx"
+	"github.com/gfa-inc/xflow/node/registry"
 	"github.com/spf13/cast"
 )
 
@@ -88,4 +90,4 @@ func (n *SplitNode) Execute(ctx context.Context, input *types.Input) (*types.Out
 	}, nil
 }
 
-func init() { Register(&SplitNode{}) }
+func init() { registry.Register(&SplitNode{}) }

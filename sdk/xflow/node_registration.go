@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gfa-inc/xflow/execution"
-	"github.com/gfa-inc/xflow/internal/noderuntime"
+	"github.com/gfa-inc/xflow/node/registry"
 	"github.com/gfa-inc/xflow/types"
 )
 
@@ -28,10 +28,10 @@ func (e *Engine) registerNodeDefinitions(defs []types.Handler) error {
 			}
 			lr.RegisterGlobal(h.Descriptor().Type, h)
 			if th, isTrigger := def.(types.TriggerHandler); isTrigger {
-				noderuntime.RegisterTrigger(th)
+				registry.RegisterTrigger(th)
 			}
 		case types.TriggerHandler:
-			noderuntime.RegisterTrigger(h)
+			registry.RegisterTrigger(h)
 		default:
 			return fmt.Errorf("node definition %q is not an action or trigger handler", def.Descriptor().Type)
 		}
@@ -74,7 +74,7 @@ func (e *Engine) registerWorkflowHandlers(wf *WorkflowBuilder) error {
 		lr.RegisterGlobal(nodeType, h)
 	}
 	for _, h := range wf.workflowTriggerHandlers() {
-		noderuntime.RegisterTrigger(h)
+		registry.RegisterTrigger(h)
 	}
 	return nil
 }
