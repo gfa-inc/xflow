@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	. "github.com/gfa-inc/xflow/node/internal"
 	"sync"
 	"time"
+
+	. "github.com/gfa-inc/xflow/node/internal"
+	"github.com/gfa-inc/xflow/node/registry"
 
 	"github.com/gfa-inc/xflow/node/internal/utils/conv"
 	"github.com/spf13/cast"
@@ -283,4 +285,4 @@ func redisHubConfigFromParams(params map[string]any) (RedisHubConsumerConfig, er
 	return cfg, nil
 }
 
-func init() { RegisterTrigger(&RedisHubTriggerNode{}) }
+func init() { registry.RegisterTrigger(&RedisHubTriggerNode{}) }

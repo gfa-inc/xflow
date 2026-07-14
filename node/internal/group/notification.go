@@ -1,13 +1,13 @@
 package group
 
-import "github.com/gfa-inc/xflow/types"
-
 import (
 	"context"
 	"fmt"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	"github.com/gfa-inc/xflow/types"
 
+	. "github.com/gfa-inc/xflow/node/internal"
+	"github.com/gfa-inc/xflow/node/registry"
 	"github.com/spf13/cast"
 )
 
@@ -132,4 +132,4 @@ func isEmptyNotificationRecipient(v any) bool {
 	}
 }
 
-func init() { Register(&NotificationNode{}) }
+func init() { registry.Register(&NotificationNode{}) }

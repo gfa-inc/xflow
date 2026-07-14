@@ -1,14 +1,14 @@
 package flow
 
-import "github.com/gfa-inc/xflow/types"
-
 import (
 	"context"
 	"fmt"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	"github.com/gfa-inc/xflow/types"
 
+	. "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/internal/utils/exprx"
+	"github.com/gfa-inc/xflow/node/registry"
 )
 
 // IfNode implements xflow.if — conditional branch node.
@@ -66,4 +66,4 @@ func (n *IfNode) Execute(ctx context.Context, input *types.Input) (*types.Output
 	return &types.Output{Data: input.Data, Port: "false"}, nil
 }
 
-func init() { Register(&IfNode{}) }
+func init() { registry.Register(&IfNode{}) }
