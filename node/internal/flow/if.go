@@ -6,14 +6,14 @@ import (
 
 	"github.com/gfa-inc/xflow/types"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/internal/utils/exprx"
 	"github.com/gfa-inc/xflow/node/registry"
 )
 
 // IfNode implements xflow.if — conditional branch node.
 type IfNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Condition string
 }
 

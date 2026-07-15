@@ -6,7 +6,7 @@ import (
 
 	"github.com/gfa-inc/xflow/types"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/registry"
 	"github.com/spf13/cast"
 )
@@ -14,7 +14,7 @@ import (
 // NotificationNode implements xflow.notification — records a normalized
 // notification request for downstream workflow steps.
 type NotificationNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Channel string
 	To      any
 	Subj    string

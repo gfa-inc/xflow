@@ -5,7 +5,7 @@ import (
 
 	"context"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/registry"
 )
 
@@ -17,7 +17,7 @@ import (
 // incoming edge from a later loop. The node itself has no parameters and simply
 // forwards the workflow submission params to its main output.
 type StartNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 }
 
 // Start returns the built-in xflow.start node builder.

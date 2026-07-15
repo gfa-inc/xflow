@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/types"
 	"github.com/spf13/cast"
 )
 
 // LimitNode implements xflow.transform.limit — keeps the first max items.
 type LimitNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Items string
 	Max   int
 }

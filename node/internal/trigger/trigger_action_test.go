@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/types"
 )
 
@@ -35,7 +35,7 @@ func TestBuiltInTriggerExecuteForwardsTriggerEvent(t *testing.T) {
 }
 
 func TestCustomTriggerExecuteForwardsTriggerEvent(t *testing.T) {
-	tr := DefineTrigger("test.trigger.forward", func(context.Context, *types.TriggerActivateInput) (types.TriggerSubscription, error) {
+	tr := nodeinternal.DefineTrigger("test.trigger.forward", func(context.Context, *types.TriggerActivateInput) (types.TriggerSubscription, error) {
 		return types.CloseFunc(func(context.Context) error { return nil }), nil
 	})
 	event := &types.TriggerEvent{ID: "evt-1"}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/internal/utils/exprx"
 	"github.com/gfa-inc/xflow/types"
 )
@@ -12,7 +12,7 @@ import (
 // SetNode implements xflow.transform.set — assigns literal and expression
 // fields onto the current input data.
 type SetNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Fields      map[string]any
 	Expressions map[string]string
 }
