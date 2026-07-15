@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/registry"
 
 	"github.com/gfa-inc/xflow/types"
@@ -14,7 +14,7 @@ import (
 )
 
 type CronTriggerNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Expression string
 	Timezone   string
 }
@@ -56,7 +56,7 @@ func (n *CronTriggerNode) OnError(s types.OnError) types.Builder {
 }
 func (n *CronTriggerNode) TriggerHandler() types.TriggerHandler { return n }
 func (n *CronTriggerNode) Execute(_ context.Context, input *types.Input) (*types.Output, error) {
-	return ExecuteTriggerEntry(input)
+	return nodeinternal.ExecuteTriggerEntry(input)
 }
 
 func (n *CronTriggerNode) Activate(ctx context.Context, in *types.TriggerActivateInput) (types.TriggerSubscription, error) {

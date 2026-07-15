@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/internal/utils/conv"
 	"github.com/gfa-inc/xflow/types"
 )
@@ -12,7 +12,7 @@ import (
 // PickNode implements xflow.transform.pick — keeps only the named fields from
 // the input data's top-level map, removing all others.
 type PickNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Fields []string
 }
 

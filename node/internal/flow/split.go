@@ -8,7 +8,7 @@ import (
 
 	"slices"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/internal/utils/conv"
 	"github.com/gfa-inc/xflow/node/internal/utils/exprx"
 	"github.com/gfa-inc/xflow/node/registry"
@@ -17,7 +17,7 @@ import (
 
 // SplitNode implements xflow.split — fans out one execution per item in a collection.
 type SplitNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Items     string
 	BatchSize int
 }

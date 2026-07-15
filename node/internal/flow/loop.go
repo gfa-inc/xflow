@@ -8,7 +8,7 @@ import (
 
 	"slices"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/internal/utils/conv"
 	"github.com/gfa-inc/xflow/node/internal/utils/exprx"
 	"github.com/gfa-inc/xflow/node/registry"
@@ -17,7 +17,7 @@ import (
 
 // LoopNode implements xflow.loop — iterates over a collection with an embedded sub-graph.
 type LoopNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Items     string
 	BatchSize int
 }

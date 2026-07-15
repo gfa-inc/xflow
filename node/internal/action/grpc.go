@@ -9,7 +9,7 @@ import (
 
 	"time"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/registry"
 	"github.com/spf13/cast"
 	"google.golang.org/grpc"
@@ -23,7 +23,7 @@ import (
 
 // GRPCNode implements xflow.grpc — executes a gRPC unary call.
 type GRPCNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	Service string
 	Method  string
 	Host    string

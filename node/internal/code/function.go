@@ -8,14 +8,14 @@ import (
 
 	"sync"
 
-	. "github.com/gfa-inc/xflow/node/internal"
+	nodeinternal "github.com/gfa-inc/xflow/node/internal"
 	"github.com/gfa-inc/xflow/node/internal/utils/exprx"
 	"github.com/gfa-inc/xflow/node/registry"
 )
 
 // FunctionNode implements xflow.function — executes a named Go function or an inline Expr expression.
 type FunctionNode struct {
-	BaseNode
+	nodeinternal.BaseNode
 	FunctionName string
 	Code         string
 	Params       map[string]any

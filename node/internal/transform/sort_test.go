@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gfa-inc/xflow/node/registry"
 	"github.com/gfa-inc/xflow/node"
+	"github.com/gfa-inc/xflow/node/registry"
 	"github.com/gfa-inc/xflow/types"
 )
 
