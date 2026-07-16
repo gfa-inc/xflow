@@ -34,7 +34,6 @@ import (
 	"github.com/gfa-inc/xflow/backend/asynq"
 	"github.com/gfa-inc/xflow/backend/memory"
 	"github.com/gfa-inc/xflow/engine"
-	"github.com/gfa-inc/xflow/observability"
 	obslogger "github.com/gfa-inc/xflow/observability/logger"
 	"github.com/gfa-inc/xflow/observability/metrics"
 	"github.com/gfa-inc/xflow/service/control"
@@ -152,7 +151,10 @@ func buildControlPlane(cfg serverConfig) (*control.ControlPlane, func(), error) 
 	} else {
 		asynqOpts := []asynq.Option{asynq.WithConcurrency(cfg.concurrency), asynq.WithStateLogger(logger)}
 		if metricsCollector != nil {
-			asynqOpts = append(asynqOpts, asynq.WithAuditObserver(observability.NewAuditMetrics(metricsCollector)))
+			asynqOpts = append(asynqOpts,
+				asynq.WithAuditObserver(metrics.NewAuditMetrics(metricsCollector)),
+				asynq.WithLeaseObserver(metrics.NewLeaseMetrics(metricsCollector)),
+			)
 		}
 		backend, err := asynq.New(cfg.redis, nil, asynqOpts...)
 		if err != nil {
