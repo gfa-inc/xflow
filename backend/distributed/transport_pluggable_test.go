@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gfa-inc/xflow/backend/queue"
+	"github.com/gfa-inc/xflow/backend/distributed/internal/queue"
 	"github.com/gfa-inc/xflow/engine"
 )
 
