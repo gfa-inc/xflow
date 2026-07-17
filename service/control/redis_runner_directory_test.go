@@ -9,7 +9,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 
-	backendasynq "github.com/gfa-inc/xflow/backend/asynq"
+	"github.com/gfa-inc/xflow/backend/distributed"
 	backendmemory "github.com/gfa-inc/xflow/backend/memory"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/service/protocol"
@@ -209,9 +209,9 @@ func TestNewControlPlanePrefersConfiguredRunnerDirectory(t *testing.T) {
 
 func TestNewControlPlaneUsesRedisRunnerDirectoryWhenBackendExposesClient(t *testing.T) {
 	redisServer, _ := newRedisRunnerDirectoryTestClient(t)
-	backend, err := backendasynq.New(redisServer.Addr(), nil)
+	backend, err := distributed.New(redisServer.Addr(), nil)
 	if err != nil {
-		t.Fatalf("asynq.New() error = %v", err)
+		t.Fatalf("distributed.New() error = %v", err)
 	}
 	controlPlane, err := NewControlPlane(Config{Backend: backend})
 	if err != nil {
