@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gfa-inc/xflow/backend/asynq"
+	"github.com/gfa-inc/xflow/backend/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
 	"github.com/gfa-inc/xflow/types"
@@ -65,9 +65,9 @@ func TestAtomicReliabilityRealRedisLeaseCommitAndOutboxRecovery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	backend, err := asynq.New(addr, nil, asynq.WithConsumer(false))
+	backend, err := distributed.New(addr, nil, distributed.WithConsumer(false))
 	if err != nil {
-		t.Fatalf("asynq.New() error = %v", err)
+		t.Fatalf("distributed.New() error = %v", err)
 	}
 	queue := &atomicReliabilityQueue{err: errAtomicReliabilityQueueUnavailable}
 	eng := engine.New(backend.State(), queue,

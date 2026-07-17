@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gfa-inc/xflow/backend/asynq"
+	"github.com/gfa-inc/xflow/backend/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/types"
 )
@@ -16,9 +16,9 @@ import (
 func TestAsynqQueueRealEnqueueAndConsume(t *testing.T) {
 	addr := requireRedis(t)
 
-	b, err := asynq.New(addr, nil, asynq.WithConcurrency(1), asynq.WithConsumer(true))
+	b, err := distributed.New(addr, nil, distributed.WithConcurrency(1), distributed.WithConsumer(true))
 	if err != nil {
-		t.Fatalf("asynq.New: %v", err)
+		t.Fatalf("distributed.New: %v", err)
 	}
 
 	eng := engine.New(b.State(), b.Queue())

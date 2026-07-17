@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gfa-inc/xflow/backend/asynq"
+	"github.com/gfa-inc/xflow/backend/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
 	"github.com/gfa-inc/xflow/service/control"
@@ -274,12 +274,12 @@ func BenchmarkRedisRunnerReconnectStorm(b *testing.B) {
 	}
 }
 
-func newPerfRedisBackend(b *testing.B) (*asynq.Backend, *redis.Client) {
+func newPerfRedisBackend(b *testing.B) (*distributed.Backend, *redis.Client) {
 	b.Helper()
 	addr := realRedisAddr(b)
-	backend, err := asynq.New(addr, nil, asynq.WithConsumer(false))
+	backend, err := distributed.New(addr, nil, distributed.WithConsumer(false))
 	if err != nil {
-		b.Fatalf("asynq.New() error = %v", err)
+		b.Fatalf("distributed.New() error = %v", err)
 	}
 	rdb := redis.NewClient(&redis.Options{Addr: addr})
 	if err := rdb.Ping(context.Background()).Err(); err != nil {

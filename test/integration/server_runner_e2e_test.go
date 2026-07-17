@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gfa-inc/xflow/backend/asynq"
+	"github.com/gfa-inc/xflow/backend/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
 	"github.com/gfa-inc/xflow/service/control"
@@ -92,9 +92,9 @@ func waitForE2ERunner(t *testing.T, runners control.RunnerDirectory, id string) 
 func TestServerRunnerE2ERealRedis(t *testing.T) {
 	addr := requireRedis(t)
 
-	b, err := asynq.New(addr, nil, asynq.WithConcurrency(1), asynq.WithConsumer(true))
+	b, err := distributed.New(addr, nil, distributed.WithConcurrency(1), distributed.WithConsumer(true))
 	if err != nil {
-		t.Fatalf("asynq.New: %v", err)
+		t.Fatalf("distributed.New: %v", err)
 	}
 
 	// Finding 3: flush stale asynq tasks from previous (crashed) runs.
@@ -196,9 +196,9 @@ func (h *e2eGRPCHandler) Execute(_ context.Context, input *types.Input) (*types.
 func TestServerRunnerE2EgRPCStreamRealRedis(t *testing.T) {
 	addr := requireRedis(t)
 
-	b, err := asynq.New(addr, nil, asynq.WithConcurrency(2), asynq.WithConsumer(true))
+	b, err := distributed.New(addr, nil, distributed.WithConcurrency(2), distributed.WithConsumer(true))
 	if err != nil {
-		t.Fatalf("asynq.New: %v", err)
+		t.Fatalf("distributed.New: %v", err)
 	}
 	rdb := redis.NewClient(&redis.Options{Addr: addr})
 	flushAsynqKeys(context.Background(), t, rdb)
