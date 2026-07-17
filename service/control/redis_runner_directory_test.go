@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/gfa-inc/xflow/backend/distributed"
-	backendmemory "github.com/gfa-inc/xflow/backend/memory"
+	backendlocal "github.com/gfa-inc/xflow/backend/local"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/service/protocol"
 	"github.com/gfa-inc/xflow/types"
@@ -196,7 +196,7 @@ func TestRedisRunnerDirectoryFencesLeasedReleaseByToken(t *testing.T) {
 func TestNewControlPlanePrefersConfiguredRunnerDirectory(t *testing.T) {
 	configured := NewMemoryRunnerDirectory()
 	controlPlane, err := NewControlPlane(Config{
-		Backend:         backendmemory.New(),
+		Backend:         backendlocal.New(),
 		RunnerDirectory: configured,
 	})
 	if err != nil {

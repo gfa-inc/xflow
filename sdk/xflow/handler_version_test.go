@@ -3,11 +3,12 @@ package xflow
 import (
 	"context"
 	"errors"
-	"github.com/gfa-inc/xflow/node/registry"
 	"strings"
 	"testing"
 
-	"github.com/gfa-inc/xflow/backend/memory"
+	"github.com/gfa-inc/xflow/node/registry"
+
+	"github.com/gfa-inc/xflow/backend/local"
 	"github.com/gfa-inc/xflow/execution"
 	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/types"
@@ -31,7 +32,7 @@ func (h sdkVersionedHandler) Execute(_ context.Context, input *types.Input) (*ty
 }
 
 func TestAddWorkflow_RejectsMissingHandlerVersion(t *testing.T) {
-	provider := memory.New()
+	provider := local.New()
 	eng, err := newFromConfig(&engineConfig{allowDirectHandlers: false}, provider)
 	if err != nil {
 		t.Fatalf("newFromConfig() error = %v", err)
@@ -70,7 +71,7 @@ func TestAddWorkflow_RejectsMissingHandlerVersion(t *testing.T) {
 }
 
 func TestAddWorkflow_AcceptsWorkflowBundledHandlers(t *testing.T) {
-	provider := memory.New()
+	provider := local.New()
 	eng, err := newFromConfig(&engineConfig{allowDirectHandlers: false}, provider)
 	if err != nil {
 		t.Fatalf("newFromConfig() error = %v", err)
@@ -92,7 +93,7 @@ func TestRegistry_VersionPolicy_WithVersionPolicyOption(t *testing.T) {
 	const typ = "test.versioned/sdk-option"
 	registry.Register(sdkVersionedHandler{typ: typ, version: 1})
 
-	provider := memory.New()
+	provider := local.New()
 	eng, err := newFromConfig(&engineConfig{
 		allowDirectHandlers: false,
 		versionPolicy:       execution.VersionStrict,

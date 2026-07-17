@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/gfa-inc/xflow/backend/distributed"
-	backendmemory "github.com/gfa-inc/xflow/backend/memory"
+	backendlocal "github.com/gfa-inc/xflow/backend/local"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/observability/metrics"
 	"github.com/gfa-inc/xflow/service/control"
@@ -112,7 +112,7 @@ func buildControlPlane(cfg Config) (*control.ControlPlane, error) {
 	}
 
 	if cfg.RedisAddr == "" {
-		ccfg.Backend = backendmemory.New(backendmemory.WithConcurrency(cfg.Concurrency))
+		ccfg.Backend = backendlocal.New(backendlocal.WithConcurrency(cfg.Concurrency))
 	} else {
 		opts := []distributed.Option{
 			distributed.WithConcurrency(cfg.Concurrency),

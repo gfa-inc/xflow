@@ -9,7 +9,7 @@ import (
 
 	asynqlib "github.com/hibiken/asynq"
 
-	"github.com/gfa-inc/xflow/backend/queue"
+	"github.com/gfa-inc/xflow/backend/distributed/internal/queue"
 )
 
 // taskType is the Asynq task type used for all xflow node tasks.
