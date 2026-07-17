@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/gfa-inc/xflow/engine"
+	"github.com/gfa-inc/xflow/observability/tracing"
 	"github.com/gfa-inc/xflow/service/protocol"
 	"github.com/gfa-inc/xflow/service/protocol/runnerpb"
 )
@@ -58,6 +59,16 @@ func WithGRPCPollWait(d time.Duration) GRPCServerOption {
 	}
 }
 
+// WithGRPCTracer installs a distributed tracing implementation on the gRPC
+// control-plane server. Mirrors WithTracer for the HTTP server.
+func WithGRPCTracer(t tracing.Tracer) GRPCServerOption {
+	return func(s *GRPCServer) {
+		if t != nil {
+			s.core.tracer = t
+		}
+	}
+}
+
 // NewGRPCServer builds a gRPC Runner Protocol server backed by the given engine
 // and runner directory. Pass the same RunnerDirectory used by the HTTP Server and
 // Dispatcher to share runner state across transports.
@@ -70,6 +81,7 @@ func NewGRPCServer(engine EngineFacade, runners RunnerDirectory, opts ...GRPCSer
 			engine:   engine,
 			runners:  runners,
 			pollWait: time.Second,
+			tracer:   tracing.NoopTracer{},
 		},
 	}
 	for _, o := range opts {
