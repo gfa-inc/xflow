@@ -10,6 +10,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/alicebob/miniredis/v2/server"
 	"github.com/gfa-inc/xflow/engine"
+	"github.com/gfa-inc/xflow/backend/tenant"
 	"github.com/gfa-inc/xflow/types"
 	"github.com/redis/go-redis/v9"
 )
@@ -124,7 +125,7 @@ func TestTransientStructuralKeysGetTransientTTLAtCreation(t *testing.T) {
 		t.Fatalf("CreateExecution() error = %v", err)
 	}
 
-	structural := []string{execKey(id, "status"), execKey(id, "graph"), execKey(id, "params")}
+	structural := []string{execKey(tenant.DefaultTenant, id, "status"), execKey(tenant.DefaultTenant, id, "graph"), execKey(tenant.DefaultTenant, id, "params")}
 	for _, key := range structural {
 		got := rdb.TTL(ctx, key).Val()
 		if got < 55*time.Second {

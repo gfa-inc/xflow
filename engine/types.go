@@ -3,6 +3,7 @@ package engine
 import (
 	"time"
 
+	"github.com/gfa-inc/xflow/backend/tenant"
 	"github.com/gfa-inc/xflow/engine/graph"
 	"github.com/gfa-inc/xflow/types"
 )
@@ -199,6 +200,10 @@ type ExpiredLease struct {
 	TTL          time.Duration
 	ActivationID int
 	AutoDepth    int
+	// TenantID is the tenant that owns the execution. The sweeper uses it to
+	// reconstruct the tenant context for reclaim so keys are looked up in the
+	// correct namespace.
+	TenantID tenant.TenantID
 	// TaskType and Payload reproduce the original queued task exactly when a
 	// running or committing lease is reclaimed after a process crash.
 	TaskType TaskType
