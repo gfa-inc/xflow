@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gfa-inc/xflow/backend/distributed"
+	"github.com/gfa-inc/xflow/backend/providers/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/execution"
 	"github.com/gfa-inc/xflow/node/registry"

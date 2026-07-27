@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gfa-inc/xflow/backend/tenant"
 	"github.com/gfa-inc/xflow/engine"
+	"github.com/gfa-inc/xflow/namespace"
 )
 
 // ErrNoMatchingRunner indicates no registered runner advertises the lease's
@@ -119,7 +119,7 @@ func (d *Dispatcher) HandleTask(ctx context.Context, task *engine.Task) error {
 		AssignmentID: BuildAssignmentID(task),
 		Task:         *task,
 		Routing:      routing,
-		TenantID:     tenant.FromContext(ctx),
+		Namespace:    namespace.FromContext(ctx),
 	})
 	if err != nil {
 		d.observeTransient(ctx, dispatchTransientReason(err))

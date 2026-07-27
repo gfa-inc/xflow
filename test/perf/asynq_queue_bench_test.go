@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/gfa-inc/xflow/backend/distributed"
+	"github.com/gfa-inc/xflow/backend/providers/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/types"
 )

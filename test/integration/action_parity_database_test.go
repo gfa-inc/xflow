@@ -13,8 +13,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/gfa-inc/xflow/backend/tenant"
 	"github.com/gfa-inc/xflow/engine"
+	"github.com/gfa-inc/xflow/namespace"
 	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/node/registry"
 	"github.com/gfa-inc/xflow/types"
@@ -38,12 +38,12 @@ func TestDatabaseActionErrorParity(t *testing.T) {
 	}
 
 	cases := []struct {
-		name                 string
-		pool                 types.ResourcePool
-		maxAttempts          int
-		wantAttempt          int
-		wantStatus           types.ExecutionStatus
-		errContains          string
+		name                   string
+		pool                   types.ResourcePool
+		maxAttempts            int
+		wantAttempt            int
+		wantStatus             types.ExecutionStatus
+		errContains            string
 		wantHandlerInvocations int
 	}{
 		{
@@ -158,8 +158,8 @@ func (h *databaseParityHandler) Descriptor() types.Descriptor { return h.inner.D
 
 func (h *databaseParityHandler) Execute(ctx context.Context, input *types.Input) (*types.Output, error) {
 	h.attempts.Add(1)
-	input.SetTenant(tenant.DefaultTenant)
-	input.SetCredentialResolver(func(tenant tenant.TenantID, name string) map[string]any { return h.cred })
+	input.SetNamespace(namespace.Default)
+	input.SetCredentialResolver(func(namespace namespace.Namespace, name string) map[string]any { return h.cred })
 	if h.pool != nil {
 		ctx = types.WithResourcePool(ctx, h.pool)
 	}

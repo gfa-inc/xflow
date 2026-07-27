@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gfa-inc/xflow/backend/distributed"
+	"github.com/gfa-inc/xflow/backend/providers/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
 	"github.com/gfa-inc/xflow/types"
@@ -167,7 +167,7 @@ func deleteAtomicReliabilityKeys(t *testing.T, rdb *redis.Client, id types.Execu
 
 	var cursor uint64
 	for {
-		keys, next, err := rdb.Scan(ctx, cursor, fmt.Sprintf("xflow:tdefault:exec:{%s}:*", id), 128).Result()
+		keys, next, err := rdb.Scan(ctx, cursor, fmt.Sprintf("xflow:ns:default:exec:{%s}:*", id), 128).Result()
 		if err != nil {
 			t.Errorf("scan test execution keys: %v", err)
 			return

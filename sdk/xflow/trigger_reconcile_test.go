@@ -12,7 +12,7 @@ import (
 	"github.com/gfa-inc/xflow/node/registry"
 
 	"github.com/gfa-inc/xflow/backend"
-	"github.com/gfa-inc/xflow/backend/local"
+	"github.com/gfa-inc/xflow/backend/providers/local"
 	"github.com/gfa-inc/xflow/node"
 	"github.com/gfa-inc/xflow/types"
 )
