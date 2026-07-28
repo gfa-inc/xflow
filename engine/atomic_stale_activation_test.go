@@ -9,10 +9,10 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 
-	"github.com/gfa-inc/xflow/backend/distributed"
-	"github.com/gfa-inc/xflow/backend/tenant"
+	"github.com/gfa-inc/xflow/backend/providers/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
+	"github.com/gfa-inc/xflow/namespace"
 	"github.com/gfa-inc/xflow/types"
 )
 
@@ -112,16 +112,16 @@ func TestEngineHandleSystemTaskDropsStaleActivationAdvance(t *testing.T) {
 
 	// Simulate the source node moving to a newer activation while an old
 	// advance task is still in flight.
-	metaKey := fmt.Sprintf("xflow:t%s:exec:{%s}:node:%s:meta", tenant.DefaultTenant, id, "start")
+	metaKey := fmt.Sprintf("xflow:ns:%s:exec:{%s}:node:%s:meta", namespace.Default, id, "start")
 	if err := be.RedisClient().HSet(ctx, metaKey, "activation_id", 1).Err(); err != nil {
 		t.Fatalf("bump activation: %v", err)
 	}
 
 	// Snapshot downstream scheduling state before the stale advance.
 	rdb := be.RedisClient()
-	indegreeKey := fmt.Sprintf("xflow:t%s:exec:{%s}:indegree:1", tenant.DefaultTenant, id)
-	activeKey := fmt.Sprintf("xflow:t%s:exec:{%s}:active_inputs:1", tenant.DefaultTenant, id)
-	outboxKey := fmt.Sprintf("xflow:t%s:exec:{%s}:outbox:ready", tenant.DefaultTenant, id)
+	indegreeKey := fmt.Sprintf("xflow:ns:%s:exec:{%s}:indegree:1", namespace.Default, id)
+	activeKey := fmt.Sprintf("xflow:ns:%s:exec:{%s}:active_inputs:1", namespace.Default, id)
+	outboxKey := fmt.Sprintf("xflow:ns:%s:exec:{%s}:outbox:ready", namespace.Default, id)
 
 	beforeIndegree, err := rdb.Get(ctx, indegreeKey).Int()
 	if err != nil {

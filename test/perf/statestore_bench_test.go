@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/gfa-inc/xflow/backend/distributed"
+	"github.com/gfa-inc/xflow/backend/providers/distributed"
 	"github.com/gfa-inc/xflow/engine"
 	"github.com/gfa-inc/xflow/engine/graph"
 	"github.com/gfa-inc/xflow/types"

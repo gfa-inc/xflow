@@ -1,7 +1,7 @@
 package xflow
 
 import (
-	backendlocal "github.com/gfa-inc/xflow/backend/local"
+	backendlocal "github.com/gfa-inc/xflow/backend/providers/local"
 	"github.com/gfa-inc/xflow/node/resource"
 	"github.com/gfa-inc/xflow/types"
 )

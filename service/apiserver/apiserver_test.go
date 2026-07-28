@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gfa-inc/xflow/backend/distributed"
-	backendlocal "github.com/gfa-inc/xflow/backend/local"
+	"github.com/gfa-inc/xflow/backend/providers/distributed"
+	backendlocal "github.com/gfa-inc/xflow/backend/providers/local"
 	"github.com/gfa-inc/xflow/service/control"
 )
 
